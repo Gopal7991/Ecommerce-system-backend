@@ -8,6 +8,7 @@ use Illuminate\Support\Facades\Auth;
 use App\Http\Controllers\Controller;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Validation\ValidationException;
+use Illuminate\Validation\Rule;
 
 
 class AuthController extends Controller
@@ -100,6 +101,26 @@ class AuthController extends Controller
         ], 200);
         // return back()->with('status', 'Password updated successfully');
 
+    }
+    public function updateProfile(Request $request)
+    {
+        $user = $request->user();
+
+        $validated = $request->validate([
+            'firstname' => 'required|string|max:255',
+            'lastname'  => 'required|string|max:255',
+            'email'     => ['required', 'email', Rule::unique('users')->ignore($user->id)],
+            'mobile'    => 'required|max:20',
+            'birthdate' => 'required|date',
+            'gender'    => 'required|in:male,female',
+        ]);
+
+        $user->update($validated);
+
+        return response()->json([
+            'message' => 'Profile updated successfully!',
+            'user'    => $user
+        ], 200);
     }
     public function logout(Request $request)
     {

@@ -23,13 +23,30 @@ class CategoryController extends Controller
                 $current = $current->parent;
             }
             $cat->full_name = implode(' -> ', $names);
+            
+            $cat->full_child_name = $this->buildChildNamePath($cat);
             return $cat;
         });
 
         return response()->json([
-            'message' => 'Category Added Successfully',
+            'message' => 'Category List',
             'data' => $categories
         ]);
+    }
+   
+    private function buildChildNamePath($category) {
+        // if ($category->childrenRecursive->isEmpty()) {
+        //     return $category->name;
+        // }
+        if (!$category->parentRecursive) {
+            return $category->name;
+        }
+
+        $childBranches = $category->childrenRecursive->map(function($child) {
+            return $this->buildChildNamePath($child);
+        })->implode(', ');
+
+        return $category->name . ' ->' . $childBranches ;
     }
 
     public function store(Request $request)
@@ -62,7 +79,6 @@ class CategoryController extends Controller
         $categories = Category::with('parentRecursive')->get();
 
         $result = [];
-
         foreach ($categories as $category) {
             $result[] = [
                 'id' => $category->id,
@@ -73,5 +89,41 @@ class CategoryController extends Controller
         }
 
         return response()->json($result);
+    }
+
+    public function edit($id)
+    {
+        $category = Category::findOrFail($id);
+
+        return response()->json($category);
+    }
+
+    public function update(Request $request, $id)
+    {
+        $category = Category::findOrFail($id);
+
+        $validatedData = $request->validate([
+            'name' => 'required|max:255',
+            'parent_id' => 'nullable',
+        ]);
+
+        $validatedData['is_active'] = $request->has('is_active');
+        $category->update($validatedData);
+
+        return response()->json(['message' => 'Category updated successfully!']);
+    }
+
+    public function destroy($id)
+    {
+        $category = Category::findOrFail($id);
+
+        // if ($category->children()->count() > 0) {
+        //     return response()->json([
+        //         'message' => 'Cannot delete this category. Please delete its child categories first.',
+        //         'status' => 'error'
+        //     ], 409); // Use a 409 Conflict status code
+        // }
+        $category->delete();
+        return response()->json(['message' => 'Deleted']);
     }
 }

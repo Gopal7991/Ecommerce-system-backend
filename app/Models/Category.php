@@ -8,10 +8,11 @@ use Laravel\Sanctum\HasApiTokens;
 use Illuminate\Notifications\Notifiable;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\SoftDeletes;
 
 class Category extends Model
 {
-    use HasApiTokens, HasFactory, Notifiable;
+    use HasApiTokens, HasFactory, Notifiable, SoftDeletes;
 
      protected $fillable = [
         'name',
@@ -37,5 +38,19 @@ class Category extends Model
     public function parentRecursive()
     {
         return $this->parent()->with('parentRecursive');
+    }
+    public function childrenRecursive() {
+    return $this->children()->with('childrenRecursive');
+}
+
+    protected static function boot()
+    {
+        parent::boot();
+
+        static::deleting(function ($category) {
+            $category->children()->each(function ($child) {
+                $child->delete(); 
+            });
+        });
     }
 }
