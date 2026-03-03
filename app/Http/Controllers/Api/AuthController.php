@@ -9,6 +9,7 @@ use App\Http\Controllers\Controller;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Validation\ValidationException;
 use Illuminate\Validation\Rule;
+use Illuminate\Support\Facades\Storage;
 
 
 class AuthController extends Controller
@@ -121,6 +122,25 @@ class AuthController extends Controller
             'message' => 'Profile updated successfully!',
             'user'    => $user
         ], 200);
+    }
+
+    public function updateProfileImage(Request $request)
+    {
+        // echo "<pre>"; print_r($request->all());exit;
+        $request->validate([
+            'profile_image' => 'required|image|mimes:jpeg,png,jpg,gif|max:2048',
+        ]);
+
+        if ($request->hasFile('profile_image')) {
+
+        $path = $request->file('profile_image')->store('profiles', 'public');
+        $url = asset(Storage::url($path));
+            $user = auth()->user();
+            $user->profile_image = $path;
+            $user->save();
+
+            return response()->json(['message' => 'Image stored successfully!', 'image_url' => $url]);
+        }
     }
     public function logout(Request $request)
     {
