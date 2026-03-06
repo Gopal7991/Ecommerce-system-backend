@@ -118,25 +118,34 @@ class ProductController extends Controller
 
     public function edit($id)
     {
-        // $category = Category::findOrFail($id);
+        $product = Product::with('variants')->findOrFail($id);
 
-        // return response()->json($category);
+        return response()->json($product);
     }
 
-    public function update(Request $request, $id)
+    public function update(StoreProductRequest  $request, $id)
     {
-        // $category = Category::findOrFail($id);
+       return DB::transaction(function () use ($request, $id) {
+        
+        $product = Product::updateOrCreate(
+            ['id' => $id], 
+            $request->validated()
+        );
+        if ($request->has('variants')) {
+            $product->variants()->delete(); 
 
-        // $validatedData = $request->validate([
-        //     'name' => 'required|max:255',
-        //     'parent_id' => 'nullable',
-        // ]);
-
-        // $validatedData['is_active'] = $request->has('is_active');
-        // $category->update($validatedData);
-
-        // return response()->json(['message' => 'Category updated successfully!']);
+            if (!empty($request->variants)) {
+                $product->variants()->createMany($request->variants);
+            }
+        }
+        
+            return response()->json([
+                'message' => 'Product updated successfully!',
+                'product' => $product->load('variants')
+            ], 200);
+        });
     }
+
 
     public function destroy($id)
     {

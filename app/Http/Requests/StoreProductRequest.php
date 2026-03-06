@@ -23,15 +23,22 @@ class StoreProductRequest extends FormRequest
      */
     public function rules()
     {
+       $productId = $this->route('product') ?? $this->route('id');
+
         return [
             'name' => 'required|string|max:255',
-            'description' => 'required|string|max:255', // Required by DB
-            'category_id' => 'required|exists:categories,id', // Required by DB
-            'price' => 'nullable|numeric',
+            'description' => 'required|string', 
+            'category_id' => 'required|exists:categories,id',
+            'price' => 'required|numeric',
             'gender' => 'nullable|string',
             'discount_price' => 'nullable|numeric',
-            'sku' => 'nullable|string|unique:products,sku',
-            'variants' => 'required|array',
+            'quantity' => 'nullable|numeric',
+            'sku' => [
+                'required',
+                'string',
+                $productId ? "unique:products,sku,$productId" : "unique:products,sku"
+            ],
+            'variants' => 'nullable|array',
             'variants.*.size' => 'nullable|string',
             'variants.*.color' => 'nullable|string',
             'variants.*.quantity' => 'nullable|integer',

@@ -22,6 +22,7 @@ class Product extends Model
         'price',
         'discount_price',
         'sku',
+        'quantity',
         'is_active'
     ];
 
