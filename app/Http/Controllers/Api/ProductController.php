@@ -3,7 +3,7 @@
 namespace App\Http\Controllers\Api;
 
 use Illuminate\Http\Request;
-use App\Models\{Category,Product};
+use App\Models\{Category,Product,ProductImage};
 use Illuminate\Support\Facades\Auth;
 use App\Http\Controllers\Controller;
 use Illuminate\Support\Facades\Hash;
@@ -11,7 +11,7 @@ use Illuminate\Validation\ValidationException;
 use App\Http\Resources\CategoryResource;
 use App\Http\Requests\StoreProductRequest;
 use Illuminate\Support\Facades\DB;
-
+use Illuminate\Support\Facades\Storage;
 
 class ProductController extends Controller
 {
@@ -23,59 +23,10 @@ class ProductController extends Controller
             'success' => true,
             'data' => $products
         ], 200);
-        // $categories = Category::with('parent')->get()->map(function($cat) {
-        //     $names = [];
-        //     $current = $cat;
-        //     while ($current) {
-        //         array_unshift($names, $current->name);
-        //         $current = $current->parent;
-        //     }
-        //     $cat->full_name = implode(' -> ', $names);
-            
-        //     $cat->full_child_name = $this->buildChildNamePath($cat);
-        //     return $cat;
-        // });
-
-        // return response()->json([
-        //     'message' => 'Category List',
-        //     'data' => $categories
-        // ]);
     }
-   
-    // private function buildChildNamePath($category) {
-    //     // if ($category->childrenRecursive->isEmpty()) {
-    //     //     return $category->name;
-    //     // }
-    //     if (!$category->parentRecursive) {
-    //         return $category->name;
-    //     }
-
-    //     $childBranches = $category->childrenRecursive->map(function($child) {
-    //         return $this->buildChildNamePath($child);
-    //     })->implode(', ');
-
-    //     return $category->name . ' ->' . $childBranches ;
-    // }
-
-    // public function store(Request $request)
-    // {
-    //     echo "<pre>"; print_r($request->all());exit;
-    //     $request->validate([
-    //         'name' => 'required|string|max:255',
-    //         'parent_id' => 'nullable|exists:categories,id',
-    //         'is_active' => 'required|boolean'
-    //     ]);
-
-        // $category = Category::create($request->all());
-
-        // return response()->json([
-        //     'message' => 'Category Added Successfully',
-        //     'data' => $category
-        // ]);
-    // }
+  
     public function store(StoreProductRequest $request)
     {
-        // Start transaction to ensure data integrity
         return DB::transaction(function () use ($request) {
             
             $product = Product::create($request->validated());
@@ -90,31 +41,6 @@ class ProductController extends Controller
         });
     }
 
-    // private function buildFullName($category)
-    // {
-    //     if (!$category->parentRecursive) {
-    //         return $category->name;
-    //     }
-
-    //     return $this->buildFullName($category->parentRecursive) . ' -> ' . $category->name;
-    // }
-
-    public function categoryWithChild(Request $request)
-    {
-        // $categories = Category::with('parentRecursive')->get();
-
-        // $result = [];
-        // foreach ($categories as $category) {
-        //     $result[] = [
-        //         'id' => $category->id,
-        //         'name' => $category->name,
-        //         'parent_id' => $category->parent_id,
-        //         'full_name' => $this->buildFullName($category),
-        //     ];
-        // }
-
-        // return response()->json($result);
-    }
 
     public function edit($id)
     {
@@ -150,13 +76,48 @@ class ProductController extends Controller
     public function destroy($id)
     {
         return DB::transaction(function () use ($id) {
-        $product = Product::findOrFail($id);
-        $product->variants()->delete();
-        $product->delete();
+            $product = Product::findOrFail($id);
+            $product->variants()->delete();
+            $product->delete();
+
+            return response()->json([
+                'message' => 'Product and all its variants deleted successfully!'
+            ], 200);
+        });
+    }
+
+    public function uploadProductImage(Request $request)
+    {
+        $productId = $request->product_id;
+        $request->validate([
+            'images.*' => 'required|image|max:2048',
+        ]);
+
+        $product = Product::findOrFail($productId);
+        $folderPath = "products/{$product->id}";
+
+        if (Storage::disk('public')->exists($folderPath)) {
+            Storage::disk('public')->deleteDirectory($folderPath);
+        }
+
+        $product->images()->delete();
+
+        if ($request->hasFile('images')) {
+            foreach ($request->file('images') as $file) {
+                $path = $file->store($folderPath, 'public');
+
+                ProductImage::create([
+                    'product_id' => $product->id,
+                    'image' => $path,
+                ]);
+            }
+        }
 
         return response()->json([
-            'message' => 'Product and all its variants deleted successfully!'
-        ], 200);
-    });
+            'status' => 'success',
+            'message' => 'Folder cleared and new images uploaded successfully',
+            'images' => $product->images()->get(),
+        ]);
     }
+
 }

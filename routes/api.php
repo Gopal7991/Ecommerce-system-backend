@@ -34,18 +34,19 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::post('/forgot-password', [AuthController::class, 'forgotPassword']);
     Route::prefix('categories')->group(function () {
         Route::get('/categories-with-child',[CategoryController::class, 'categoryWithChild']);
-        Route::get('/',[CategoryController::class, 'index']);
-        Route::post('/add',[CategoryController::class, 'store']);
-        Route::get('/edit/{id}',[CategoryController::class, 'edit']);
-        Route::put('/update/{id}',[CategoryController::class, 'update']);
-        Route::delete('/delete/{id}',[CategoryController::class, 'destroy']);
+        Route::get('/', [CategoryController::class, 'index']);
+        Route::post('/add', [CategoryController::class, 'store']);
+        Route::get('/edit/{id}', [CategoryController::class, 'edit']);
+        Route::put('/update/{id}', [CategoryController::class, 'update']);
+        Route::delete('/delete/{id}', [CategoryController::class, 'destroy']);
     });
     Route::prefix('products')->group(function () {
-        Route::get('/',[ProductController::class, 'index']);
-        Route::post('/add',[ProductController::class, 'store']);
-        Route::get('/edit/{id}',[ProductController::class, 'edit']);
-        Route::put('/update/{id}',[ProductController::class, 'update']);
-        Route::delete('/delete/{id}',[ProductController::class, 'destroy']);
+        Route::get('/', [ProductController::class, 'index']);
+        Route::post('/add', [ProductController::class, 'store']);
+        Route::get('/edit/{id}', [ProductController::class, 'edit']);
+        Route::put('/update/{id}', [ProductController::class, 'update']);
+        Route::delete('/delete/{id}', [ProductController::class, 'destroy']);
+        Route::post('/upload-images', [ProductController::class, 'uploadProductImage']);
     });
 });
 

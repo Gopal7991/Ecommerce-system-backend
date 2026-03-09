@@ -41,4 +41,8 @@ class Product extends Model
             $product->variants()->delete();
         });
     }
+    public function images()
+    {
+        return $this->hasMany(ProductImage::class);
+    }
 }
