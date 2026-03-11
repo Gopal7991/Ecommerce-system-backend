@@ -29,7 +29,6 @@ class AuthController extends Controller
 
         $user = Auth::user();
 
-        // If using Sanctum
         $token = $user->createToken('api-token')->plainTextToken;
 
         return response()->json([
@@ -41,13 +40,13 @@ class AuthController extends Controller
     public function register(Request $request)
     {
         $request->validate([
-            'name' => 'required',
+            'firstname' => 'required',
             'email' => 'required|email|unique:users',
             'password' => 'required|min:6'
         ]);
 
         $user = User::create([
-            'name' => $request->name,
+            'firstname' => $request->firstname,
             'email' => $request->email,
             'role' => 2,
             'password' => Hash::make($request->password),
@@ -75,7 +74,6 @@ class AuthController extends Controller
             ]);
         }
 
-        // 3. Update the password
         $user->password = Hash::make($request->password);
         $user->save();
 
@@ -91,7 +89,6 @@ class AuthController extends Controller
             'new_password' => ['required', 'min:5'],
         ]);
 
-        // If validation passes, update the password
         $request->user()->update([
             'password' => Hash::make($request->new_password)
         ]);
@@ -100,7 +97,6 @@ class AuthController extends Controller
             'message' => 'Password has been successfully updated.',
             'success' => true
         ], 200);
-        // return back()->with('status', 'Password updated successfully');
 
     }
     public function updateProfile(Request $request)

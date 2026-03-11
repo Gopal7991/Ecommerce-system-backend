@@ -21,4 +21,5 @@ class ProductImage extends Model
     {
         return asset('storage/' . $this->image);
     }
+    
 }

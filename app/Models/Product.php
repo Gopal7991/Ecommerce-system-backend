@@ -41,8 +41,12 @@ class Product extends Model
             $product->variants()->delete();
         });
     }
+    // public function images()
+    // {
+    //     return $this->hasMany(ProductImage::class);
+    // }
     public function images()
     {
-        return $this->hasMany(ProductImage::class);
+        return $this->hasMany(ProductImage::class, 'product_id');
     }
 }
