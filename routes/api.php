@@ -2,7 +2,7 @@
 
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
-use App\Http\Controllers\Api\{AuthController,CategoryController,ProductController};
+use App\Http\Controllers\Api\{AuthController, CategoryController, ProductController, CartController};
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Facades\Response;
 
@@ -60,9 +60,13 @@ Route::middleware('auth:sanctum')->group(function () {
         Route::post('/upload-images', [ProductController::class, 'uploadProductImage']);
         Route::get('/{id}/images', [ProductController::class, 'getImages']);
         Route::delete('/delete-image/{id}', [ProductController::class, 'deleteImage']);
+        Route::get('/brands', [ProductController::class, 'getBrand']);
+
     });
+    Route::post('/cart-items', [CartController::class, 'cartStore']);
+    Route::get('/cart-count', [CartController::class, 'cartCount']);
+    Route::delete('/cart-items/delete/{id}', [CartController::class, 'cartItemDelete']);
 });
 
 Route::post('/login', [AuthController::class, 'login']);
-    Route::post('/register', [AuthController::class, 'register']);
-
+Route::post('/register', [AuthController::class, 'register']);

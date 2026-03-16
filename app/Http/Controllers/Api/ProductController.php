@@ -3,7 +3,7 @@
 namespace App\Http\Controllers\Api;
 
 use Illuminate\Http\Request;
-use App\Models\{Category,Product,ProductImage};
+use App\Models\{Category,Product,ProductImage, Brand};
 use Illuminate\Support\Facades\Auth;
 use App\Http\Controllers\Controller;
 use Illuminate\Support\Facades\Hash;
@@ -62,10 +62,8 @@ class ProductController extends Controller
   
     public function index(Request $request)
     {
-        // Eager load category, its children, and images
         $query = Product::with(['category', 'category.children', 'images']);
 
-        // --- Search ---
         if ($search = $request->query('search')) {
             $query->where(function($q) use ($search) {
                 $q->where('products.name', 'like', "%{$search}%")
@@ -89,7 +87,7 @@ class ProductController extends Controller
             $query->orderBy($sortBy, $sortOrder);
         }
 
-        $perPage = $request->query('per_page', 5);
+        $perPage = $request->query('per_page', 50);
         $products = $query->paginate($perPage);
 
         $products->getCollection()->transform(function($product) {
@@ -128,7 +126,7 @@ class ProductController extends Controller
 
     public function edit($id)
     {
-        $product = Product::with('variants')->findOrFail($id);
+        $product = Product::with('variants','images')->findOrFail($id);
 
         return response()->json($product);
     }
@@ -231,6 +229,16 @@ class ProductController extends Controller
             'status' => 'success',
             'message' => 'Image deleted'
         ]);
+    }
+
+    public function getBrand()
+    {
+        return Brand::all();
+
+        // return response()->json([
+        //     'status' => 'success',
+        //     'barnds' => $brands
+        // ]);
     }
 
 }
