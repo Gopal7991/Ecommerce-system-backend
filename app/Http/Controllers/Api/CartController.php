@@ -42,6 +42,28 @@ class CartController extends Controller
         ]);
     }
 
+    public function cartItemUpdate(Request $request, $id)
+    {
+        $cartItem = CartItem::where('id', $id)
+            ->whereHas('cart', function($query) {
+                $query->where('user_id', auth()->id());
+            })->first();
+
+        if ($cartItem) {
+            $cartItem->update([
+                'quantity' => $request->quantity
+            ]);
+
+            return response()->json([
+                'status' => true,
+                'message' => 'Quantity updated'
+            ]);
+        }
+
+        return response()->json(['status' => false, 'message' => 'Item not found'], 404);
+    }
+
+
     public function cartItemDelete($id, Request $request)
     {
        

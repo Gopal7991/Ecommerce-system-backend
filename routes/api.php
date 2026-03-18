@@ -2,7 +2,7 @@
 
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
-use App\Http\Controllers\Api\{AuthController, CategoryController, ProductController, CartController};
+use App\Http\Controllers\Api\{AuthController, CategoryController, ProductController, CartController,StripeController};
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Facades\Response;
 
@@ -66,6 +66,8 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::post('/cart-items', [CartController::class, 'cartStore']);
     Route::get('/cart-count', [CartController::class, 'cartCount']);
     Route::delete('/cart-items/delete/{id}', [CartController::class, 'cartItemDelete']);
+    Route::put('/cart-items/updatequantity/{id}', [CartController::class, 'cartItemUpdate']);
+    Route::post('create-payment-intent', [StripeController::class, 'initiatePayment']);
 });
 
 Route::post('/login', [AuthController::class, 'login']);
