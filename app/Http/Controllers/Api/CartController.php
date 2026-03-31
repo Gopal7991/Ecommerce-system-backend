@@ -4,7 +4,7 @@ namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
 use Illuminate\Http\Request;
-use App\Models\{Cart, ProductVariant, CartItem };
+use App\Models\{Cart, ProductVariant, CartItem, Order, OrderProduct,User };
 use Illuminate\Support\Facades\Auth;
 
 class CartController extends Controller
@@ -16,6 +16,13 @@ class CartController extends Controller
         ]);
 
         $productvariant = ProductVariant::where('color',$request->color)->where('size',$request->size)->where('product_id',$request->product_id)->first();
+        if($productvariant->quantity == 0)
+        {
+            return response()->json([
+                'status' => false,
+                'message' => 'Product Not Available'
+            ]);
+        }
 
         CartItem::create([
             'cart_id' => $cart->id,
@@ -39,6 +46,43 @@ class CartController extends Controller
         return response()->json([
             'count' => $count,
             'cartData' => $cartData
+        ]);
+    }
+
+    public function orderHistory(Request $request)
+    {
+
+        $userId = auth()->id();
+
+        $histories = Order::with('orderProducts.product.images','coupon')
+            ->where('user_id', auth()->id())
+            ->get();
+
+            // @foreach($history as $order)
+            //     @foreach($order->orderProducts as $item)
+            //         {{ $item->product->name }}
+            //         <img src="{{ $item->product->images->first()->image_url }}">
+            //     @endforeach
+            // @endforeach
+            return response()->json([
+                // 'count' => $count,
+                'histories' => $histories
+            ]);
+    }
+
+    public function dashboardData(Request $request)
+    {
+        $orders = Order::where('status', 'paid')->get();
+        $totalOrderAmount = Order::where('status', 'paid')->sum('amount');
+        $users = User::where('role',2)->get();
+        $usercount = count($users);
+        $count = count($orders);
+        // print_r(count($orders));exit;
+        return response()->json([
+            'count' => $count,
+            'orders' => $orders,
+            'users' => $usercount,
+            'ordersamount' => $totalOrderAmount
         ]);
     }
 
@@ -79,5 +123,26 @@ class CartController extends Controller
                 'message' => 'Item removed from cart'
             ]);
 
+    }
+
+    public function generateReceipt($id)
+    {
+        $orders = OrderProduct::where('order_id', $id)->get();
+        $userId = auth()->id();
+
+        $orderproducts = Order::where('id', $id)->with('orderProducts.product.images','coupon')
+            ->where('user_id', auth()->id())
+            ->get();
+
+            // @foreach($history as $order)
+            //     @foreach($order->orderProducts as $item)
+            //         {{ $item->product->name }}
+            //         <img src="{{ $item->product->images->first()->image_url }}">
+            //     @endforeach
+            // @endforeach
+            return response()->json([
+                // 'count' => $count,
+                'orderProduct' => $orderproducts
+            ]);
     }
 }

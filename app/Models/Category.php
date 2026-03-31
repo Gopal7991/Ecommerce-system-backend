@@ -14,7 +14,7 @@ class Category extends Model
 {
     use HasApiTokens, HasFactory, Notifiable, SoftDeletes;
 
-     protected $fillable = [
+    protected $fillable = [
         'name',
         'parent_id',
         'is_active'
@@ -29,7 +29,6 @@ class Category extends Model
         return $this->belongsTo(Category::class, 'parent_id');
     }
 
-    // Get direct children
     public function children(): HasMany
     {
         return $this->hasMany(Category::class, 'parent_id');

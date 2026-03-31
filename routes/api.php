@@ -2,7 +2,7 @@
 
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
-use App\Http\Controllers\Api\{AuthController, CategoryController, ProductController, CartController,StripeController};
+use App\Http\Controllers\Api\{AuthController, CategoryController, ProductController, CartController,StripeController, CouponController};
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Facades\Response;
 
@@ -67,8 +67,24 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::get('/cart-count', [CartController::class, 'cartCount']);
     Route::delete('/cart-items/delete/{id}', [CartController::class, 'cartItemDelete']);
     Route::put('/cart-items/updatequantity/{id}', [CartController::class, 'cartItemUpdate']);
-    Route::post('create-payment-intent', [StripeController::class, 'initiatePayment']);
+    Route::post('checkout', [StripeController::class, 'checkout']);
+    Route::get('/order-history', [CartController::class, 'orderHistory']);
+
+    Route::get('/dashboard-data', [CartController::class, 'dashboardData']);
+    Route::prefix('coupons')->group(function () {
+        Route::get('/', [CouponController::class, 'index']);
+        Route::post('/add', [CouponController::class, 'store']);
+        Route::get('/edit/{id}', [CouponController::class, 'edit']);
+        Route::put('/update/{id}', [CouponController::class, 'update']);
+        Route::delete('/delete/{id}', [CouponController::class, 'destroy']);
+        Route::post('/apply-coupon', [CouponController::class, 'applyCoupon']);
+
+    });
+    
 });
 
 Route::post('/login', [AuthController::class, 'login']);
 Route::post('/register', [AuthController::class, 'register']);
+Route::get('success', [StripeController::class, 'success'])->name('payment.success');
+Route::get('cancel', [StripeController::class, 'cancel'])->name('payment.cancel');
+Route::get('/orders/{id}/receipt', [CartController::class, 'generateReceipt']);

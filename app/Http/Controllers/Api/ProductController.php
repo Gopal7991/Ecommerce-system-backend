@@ -62,7 +62,27 @@ class ProductController extends Controller
   
     public function index(Request $request)
     {
-        $query = Product::with(['category', 'category.children', 'images']);
+        // echo "<pre>"; print_r($request->all());exit;
+        $query = Product::with(['category', 'category.children', 'images','brand','variants']);
+        // if ($categoryId = $request->query('category_id')) {
+        //     $query->where('category_id', $categoryId);
+        // }
+
+        // if ($subCategoryId = $request->query('sub_category_id')) {
+        //     $query->where('category_id', $subCategoryId);
+        // }
+        // 
+        if ($request->filled('sub_category_id')) {
+            $query->where('products.category_id', $request->sub_category_id);
+        } 
+        // Filter by Parent Category (Broad)
+        elseif ($request->filled('category_id')) {
+            $query->whereHas('category', function($q) use ($request) {
+                $q->where('id', $request->category_id)
+                  ->orWhere('parent_id', $request->category_id);
+            });
+        }
+
 
         if ($search = $request->query('search')) {
             $query->where(function($q) use ($search) {
@@ -75,14 +95,19 @@ class ProductController extends Controller
                 });
             });
         }
-
-        $sortBy = $request->query('sort_by', 'id'); 
+        if ($brandId = $request->query('brand_id')) {
+            $query->where('brand_id', $brandId);
+        }
         $sortOrder = $request->query('sort_order', 'asc'); 
+
+
+        // Existing Sort Logic starts here...
+        $sortBy = $request->query('sort_by', 'id'); 
 
         if ($sortBy === 'category') {
             $query->join('categories', 'products.category_id', '=', 'categories.id')
                 ->orderBy('categories.name', $sortOrder)
-                ->select('products.*'); // Ensure only products columns
+                ->select('products.*'); 
         } else {
             $query->orderBy($sortBy, $sortOrder);
         }
@@ -99,7 +124,7 @@ class ProductController extends Controller
             });
             return $product;
         });
-
+        // echo '<pre>'; print_r($products);exit;
         return response()->json([
             'data' => $products->items(),
             'total' => $products->total(),
