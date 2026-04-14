@@ -2,8 +2,8 @@
 
 namespace App\Providers;
 
-use App\Models\Order;
-use App\Observers\OrderObserver;
+use App\Models\{Order,ProductVariant };
+use App\Observers\{OrderObserver, ProductVariantObserver};
 use Illuminate\Support\ServiceProvider;
 
 class AppServiceProvider extends ServiceProvider
@@ -26,5 +26,6 @@ class AppServiceProvider extends ServiceProvider
     public function boot()
     {
         Order::observe(OrderObserver::class);
+        ProductVariant::observe(ProductVariantObserver::class);
     }
 }

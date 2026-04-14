@@ -6,8 +6,8 @@ use Illuminate\Auth\Events\Registered;
 use Illuminate\Auth\Listeners\SendEmailVerificationNotification;
 use Illuminate\Foundation\Support\Providers\EventServiceProvider as ServiceProvider;
 use Illuminate\Support\Facades\Event;
-use App\Events\OrderSuccess; // Import your Event
-use App\Listeners\SendSucessMail; 
+use App\Events\{OrderSuccess, OrderInvoice};
+use App\Listeners\{SendSucessMail, SendInvoiceListener }; 
 
 class EventServiceProvider extends ServiceProvider
 {
@@ -22,6 +22,9 @@ class EventServiceProvider extends ServiceProvider
         ],
         OrderSuccess::class => [
             SendSucessMail::class,
+        ],
+        OrderInvoice::class => [
+            SendInvoiceListener::class,
         ],
     ];
 

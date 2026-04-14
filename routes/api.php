@@ -2,7 +2,7 @@
 
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
-use App\Http\Controllers\Api\{AuthController, CategoryController, ProductController, CartController,StripeController, CouponController};
+use App\Http\Controllers\Api\{AuthController, CategoryController, ProductController, CartController,StripeController, CouponController, OrderController,DashboardController};
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Facades\Response;
 
@@ -44,7 +44,7 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::post('/logout', [AuthController::class, 'logout']);
     Route::post('/forgot-password', [AuthController::class, 'forgotPassword']);
     Route::prefix('categories')->group(function () {
-        Route::get('/categories-with-child',[CategoryController::class, 'categoryWithChild']);
+        Route::get('/category-with-child',[CategoryController::class, 'categoryWithChild']);
         Route::get('/', [CategoryController::class, 'index']);
         Route::post('/add', [CategoryController::class, 'store']);
         Route::get('/edit/{id}', [CategoryController::class, 'edit']);
@@ -68,9 +68,12 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::delete('/cart-items/delete/{id}', [CartController::class, 'cartItemDelete']);
     Route::put('/cart-items/updatequantity/{id}', [CartController::class, 'cartItemUpdate']);
     Route::post('checkout', [StripeController::class, 'checkout']);
-    Route::get('/order-history', [CartController::class, 'orderHistory']);
+    Route::get('/order-history', [OrderController::class, 'orderHistory']);
+    Route::get('/my-orders', [OrderController::class, 'myOrder']);
+    Route::get('/orders', [OrderController::class, 'allOrders']);
+    Route::post('/send-order-receipt', [StripeController::class, 'sendReceipt']);
 
-    Route::get('/dashboard-data', [CartController::class, 'dashboardData']);
+    Route::get('/dashboard-data', [DashboardController::class, 'index']);
     Route::prefix('coupons')->group(function () {
         Route::get('/', [CouponController::class, 'index']);
         Route::post('/add', [CouponController::class, 'store']);
@@ -78,6 +81,15 @@ Route::middleware('auth:sanctum')->group(function () {
         Route::put('/update/{id}', [CouponController::class, 'update']);
         Route::delete('/delete/{id}', [CouponController::class, 'destroy']);
         Route::post('/apply-coupon', [CouponController::class, 'applyCoupon']);
+
+    });
+    Route::prefix('posts')->group(function () {
+        Route::get('/', [CouponController::class, 'postData']);
+        Route::post('/', [CouponController::class, 'postStore']);
+        // Route::get('/edit/{id}', [CouponController::class, 'edit']);
+        // Route::put('/update/{id}', [CouponController::class, 'update']);
+        // Route::delete('/delete/{id}', [CouponController::class, 'destroy']);
+        // Route::post('/apply-coupon', [CouponController::class, 'applyCoupon']);
 
     });
     
@@ -88,3 +100,10 @@ Route::post('/register', [AuthController::class, 'register']);
 Route::get('success', [StripeController::class, 'success'])->name('payment.success');
 Route::get('cancel', [StripeController::class, 'cancel'])->name('payment.cancel');
 Route::get('/orders/{id}/receipt', [CartController::class, 'generateReceipt']);
+
+
+
+
+Route::options('/{any}', function () {
+    return response()->json([], 200);
+})->where('any', '.*');

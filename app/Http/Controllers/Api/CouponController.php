@@ -7,24 +7,39 @@ use Illuminate\Http\Request;
 use App\Models\{Cart, Coupon, CartItem, User };
 use Illuminate\Support\Facades\Auth;
 use App\Http\Requests\CouponStoreRequest;
+use App\Repositories\CouponRepository;
+
 use Carbon\Carbon;
 
 class CouponController extends Controller
 {
-    public function index()
-    {
-        $coupons = Coupon::all();
+    protected $couponRepo;
 
+    public function __construct(CouponRepository $couponRepo)
+    {
+        $this->couponRepo = $couponRepo;
+    }
+    public function index(Request $request)
+    {
+        $coupons = $this->couponRepo->all($request);
+        
         return response()->json([
-            'message' => 'Coupon List',
-            'data' => $coupons
+            'success' => true,
+            'message' => 'Product list fetched successfully',
+            'data' => $coupons['data'],
+            'total' => $coupons['total'],
+            'per_page' => $coupons['per_page'],
+            'current_page' => $coupons['current_page'],
         ]);
+        // return response()->json([
+        //     'message' => 'Coupon List',
+        //     'data' => $coupons
+        // ]);
     }
 
     public function store(CouponStoreRequest $request)
     {
-        $coupon = Coupon::create($request->all());
-
+        $coupon = $this->couponRepo->couponStore($request);
         return response()->json([
             'message' => 'Coupon Added Successfully',
             'data' => $coupon
@@ -33,112 +48,51 @@ class CouponController extends Controller
 
     public function edit($id)
     {
-        $coupon = Coupon::findOrFail($id);
-
+        $coupon = $this->couponRepo->couponEdit($id);
         return response()->json($coupon);
     }
 
     public function update(CouponStoreRequest $request, $id)
     {
-        $coupon = Coupon::findOrFail($id);
-        $coupon->update($request->validated());
-
+        $coupon = $this->couponRepo->couponUpdate($request, $id);
         return response()->json(['message' => 'Coupon updated successfully!']);
     }
 
     public function destroy($id)
     {
-        $coupon = Coupon::findOrFail($id);
-        $coupon->delete();
-
+        $coupon = $this->couponRepo->couponDestroy($id);
         return response()->json(['message' => 'Deleted']);
     }
 
     public function applyCoupon(Request $request)
     {
-        $coupon = Coupon::where('code',$request->code)->first();
-        if (!$coupon) {
-            return response()->json(['error_message' => 'This coupon code does not exist!']);
-        }
-
-        if($coupon->max_attach <= $coupon->used_count) {
-            return response()-> json(['error_message' => 'This coupon code is expide!']);
-        }
+        $result = $this->couponRepo->CouponApplyed($request);
         
-        $currentDate = Carbon::now()->format('Y-m-d');
-        if ($currentDate > $coupon->end_date) {
-            return response()->json(['error_message' => 'This coupon code is expide!']);
+        if (!$result['status']) {
+            return response()->json([
+                'success' => false,
+                'message' => $result['message']
+            ], 400);
         }
-        if ($currentDate < $coupon->start_date) {
-            return response()->json(['error_message' => 'This coupon Currently not apply Apply after Some Time!']);
-        }
 
-        $cart = Cart::where('user_id', auth()->id())->first();
-        $allCartData = CartItem::with(['product','variant'])->where('cart_id',$cart->id)->get();
-        $brandId = $coupon->brand_id;
-        $discountAmount = 0;
-        $Subtotal = 0;
-        $productDiscount = [];
-        $appliedItemIds = [];
-        $appliedCartProduct = [];
-        
-        if ($brandId) {
-
-            foreach ($allCartData as $item) {
-                if ($item->product->brand_id == $brandId) {
-                    $price = $item->product->price;
-                    $Subtotal += ($price * $item->quantity);
-                    $appliedItemIds[] = $item->id;
-                    if ($coupon->coupon_type == 'percentage') {
-                        $productDiscount[] = ($price * $coupon->discount_percentage) / 100;
-                    }
-                }
-            }
-            if(count($appliedItemIds) == 0) {
-                return response()->json(['error_message' => 'This Coupon Not Available In This Product!']);
-            }
-            // echo "<pre>"; print_r($productDiscount);exit;
-            if ($coupon->coupon_type == 'percentage') {
-                $discountAmount = ($Subtotal * $coupon->discount_percentage) / 100;
-            } else {
-                $discountAmount = $coupon->max_discount;
-            }
-
-            if($coupon->max_discount <= $discountAmount) {
-                $discountAmount = $coupon->max_discount;
-            }
-            if($Subtotal < $coupon->min_order_amount) {
-                $discountAmount = 0;
-            }
-            
-        }
-        else {
-
-            foreach ($allCartData as $item) {
-                $price = $item->product->price;
-                $Subtotal += ($price * $item->quantity);
-                $appliedItemIds[] = $item->id;
-            }
-            if ($coupon->coupon_type == 'percentage') {
-                $discountAmount = ($Subtotal * $coupon->discount_percentage) / 100;
-            } else {
-                $discountAmount = $coupon->max_discount;
-            }
-            if($coupon->max_discount <= $discountAmount) {
-                $discountAmount = $coupon->max_discount;
-            }
-            if($Subtotal < $coupon->min_order_amount) {
-                $discountAmount = 0;
-            }
-
-        }
-        // echo "<pre>"; print_r($appliedItemIds);exit;
         return response()->json([
-            'allCartData' => $allCartData,
-            'appliedItemIds' => $appliedItemIds,
-            'discount' => $discountAmount,
-            'message' => 'Coupon Apply Successfully!'
+            'success' => true,
+            'message' => $result['message'],
+            'data' => $result['data']
         ]);
+    }
 
+    public function postData()
+    {
+        return response()->json([
+            'message' => 'Coupon Added Successfully',
+        ]);
+    }
+    public function postStore(Request $request)
+    {
+        echo "<pre>"; print_r($request->all());exit;
+        return response()->json([
+            'message' => 'Coupon Added Successfully',
+        ]);
     }
 }

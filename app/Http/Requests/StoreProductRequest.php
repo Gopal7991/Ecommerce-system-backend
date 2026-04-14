@@ -33,16 +33,30 @@ class StoreProductRequest extends FormRequest
             'price' => 'required|numeric',
             'gender' => 'nullable|string',
             'discount_price' => 'nullable|numeric',
-            'quantity' => 'nullable|numeric',
             'sku' => [
                 'required',
                 'string',
                 $productId ? "unique:products,sku,$productId" : "unique:products,sku"
             ],
-            'variants' => 'nullable|array',
-            'variants.*.size' => 'nullable|string',
-            'variants.*.color' => 'nullable|string',
-            'variants.*.quantity' => 'nullable|integer',
+
+            'has_variants' => 'required|boolean',
+
+            'quantity' => 'required_if:has_variants,0,false|nullable|numeric',
+            'variants' => 'required_if:has_variants,1,true|array|min:1',
+            'variants.*.size' => 'required_with:variants|string',
+            'variants.*.color' => 'required_with:variants|string',
+            'variants.*.quantity' => 'required_with:variants|integer|min:0',
+        ];
+    }
+
+    public function messages(): array
+    {
+        return [
+            'variants.required_if' => 'Please generate product variants before submit or un checked product has variants checkbox.',
+                        'variants.min' => 'At least one size and color combination is required.',
+            'quantity.required_if' => 'Standard product quantity is required when variants are disabled.',
+            
+            'variants.*.quantity.required_with' => 'Every variant must have a defined stock quantity.',
         ];
     }
 }

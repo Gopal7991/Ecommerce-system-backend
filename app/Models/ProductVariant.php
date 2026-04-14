@@ -11,6 +11,11 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\SoftDeletes;
 use Illuminate\Database\Eloquent\Casts\Attribute;
 
+use App\Observers\ProductVariantObserver;
+use Illuminate\Database\Eloquent\Attributes\ObservedBy;
+
+#[ObservedBy([ProductVariantObserver::class])]
+
 class ProductVariant extends Model
 {
     use HasApiTokens, HasFactory, Notifiable, SoftDeletes;

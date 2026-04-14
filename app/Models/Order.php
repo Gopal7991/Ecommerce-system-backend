@@ -20,6 +20,7 @@ class Order extends Model
         'name',
         'coupon_id',
         'session_id',
+        'transaction_id',
         'user_id',
         'email',
         'address',
@@ -41,7 +42,11 @@ class Order extends Model
     }
     public function productVariant()
     {
-        return $this->hasMany(productVariant::class, 'pr');
+        return $this->hasMany(productVariant::class, 'product_variant_id');
+    }
+    public function user()
+    {
+        return $this->belongsTo(User::class, 'user_id');
     }
 
 }

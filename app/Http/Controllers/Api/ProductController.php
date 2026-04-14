@@ -9,261 +9,160 @@ use App\Http\Controllers\Controller;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Validation\ValidationException;
 use App\Http\Resources\CategoryResource;
+use App\Repositories\ProductRepository;
 use App\Http\Requests\StoreProductRequest;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Storage;
 
 class ProductController extends Controller
 {
-    // public function index(Request $request)
-    // {
-    //      $products = Product::with(['variants', 'category'])->latest()->get();
+    protected $productRepo;
 
-    //     return response()->json([
-    //         'success' => true,
-    //         'data' => $products
-    //     ], 200);
-    // }
-
-    // public function index(Request $request)
-    // {
-    //     $query = Product::with(['category', 'images']); // eager load images
-
-    //     $sortBy = $request->query('sort_by', 'id'); 
-    //     $sortOrder = $request->query('sort_order', 'asc'); 
-
-    //     if ($sortBy == 'category') {
-    //         $query->join('categories', 'products.category_id', '=', 'categories.id')
-    //             ->orderBy('categories.name', $sortOrder)
-    //             ->select('products.*');
-    //     } else {
-    //         $query->orderBy($sortBy, $sortOrder);
-    //     }
-
-    //     $products = $query->paginate(5);
-
-    //     $products->getCollection()->transform(function($product) {
-    //         $product->images = $product->images->map(function($img) {
-    //             return [
-    //                 'url' => asset("storage/products/{$img->product_id}/{$img->filename}"),
-    //                 'filename' => $img->filename
-    //             ];
-    //         });
-    //         return $product;
-    //     });
-
-    //     return response()->json([
-    //         'data' => $products->items(),
-    //         'total' => $products->total(),
-    //         'per_page' => $products->perPage(),
-    //         'current_page' => $products->currentPage(),
-    //     ]);
-    // }
-  
+    public function __construct(ProductRepository $productRepo)
+    {
+        $this->productRepo = $productRepo;
+    }
+    
     public function index(Request $request)
     {
-        // echo "<pre>"; print_r($request->all());exit;
-        $query = Product::with(['category', 'category.children', 'images','brand','variants']);
-        // if ($categoryId = $request->query('category_id')) {
-        //     $query->where('category_id', $categoryId);
-        // }
-
-        // if ($subCategoryId = $request->query('sub_category_id')) {
-        //     $query->where('category_id', $subCategoryId);
-        // }
-        // 
-        if ($request->filled('sub_category_id')) {
-            $query->where('products.category_id', $request->sub_category_id);
-        } 
-        // Filter by Parent Category (Broad)
-        elseif ($request->filled('category_id')) {
-            $query->whereHas('category', function($q) use ($request) {
-                $q->where('id', $request->category_id)
-                  ->orWhere('parent_id', $request->category_id);
-            });
-        }
-
-
-        if ($search = $request->query('search')) {
-            $query->where(function($q) use ($search) {
-                $q->where('products.name', 'like', "%{$search}%")
-                ->orWhereHas('category', function($q2) use ($search) {
-                    $q2->where('name', 'like', "%{$search}%")
-                        ->orWhereHas('children', function($q3) use ($search) {
-                            $q3->where('name', 'like', "%{$search}%");
-                        });
-                });
-            });
-        }
-        if ($brandId = $request->query('brand_id')) {
-            $query->where('brand_id', $brandId);
-        }
-        $sortOrder = $request->query('sort_order', 'asc'); 
-
-
-        // Existing Sort Logic starts here...
-        $sortBy = $request->query('sort_by', 'id'); 
-
-        if ($sortBy === 'category') {
-            $query->join('categories', 'products.category_id', '=', 'categories.id')
-                ->orderBy('categories.name', $sortOrder)
-                ->select('products.*'); 
-        } else {
-            $query->orderBy($sortBy, $sortOrder);
-        }
-
-        $perPage = $request->query('per_page', 50);
-        $products = $query->paginate($perPage);
-
-        $products->getCollection()->transform(function($product) {
-            $product->images = $product->images->map(function($img) use ($product) {
-                return [
-                    'url' => asset("storage/products/{$product->id}/{$img->filename}"),
-                    'filename' => $img->filename
-                ];
-            });
-            return $product;
-        });
-        // echo '<pre>'; print_r($products);exit;
+        $result = $this->productRepo->getProducts($request->all());
         return response()->json([
-            'data' => $products->items(),
-            'total' => $products->total(),
-            'per_page' => $products->perPage(),
-            'current_page' => $products->currentPage(),
+            'success' => true,
+            'message' => 'Product list fetched successfully',
+            'data' => $result['data'],
+            'total' => $result['total'],
+            'per_page' => $result['per_page'],
+            'current_page' => $result['current_page'],
         ]);
     }
+
     public function store(StoreProductRequest $request)
     {
-        return DB::transaction(function () use ($request) {
-            
-            $product = Product::create($request->validated());
+        $result = $this->productRepo->createProduct($request->validated());
 
-            $product->variants()->createMany($request->variants);
-            
-
-            return response()->json([
-                'message' => 'Product and variants created successfully!',
-                'product' => $product->load('variants')
-            ], 201);
-        });
+        return response()->json([
+            'success' => $result['status'],
+            'message' => $result['message'],
+            'data' => $result['data']
+        ], 201);
     }
-
 
     public function edit($id)
     {
-        $product = Product::with('variants','images')->findOrFail($id);
+        $result = $this->productRepo->EditProduct($id);
+        if (!$result['status']) {
+            return response()->json([
+                'success' => false,
+                'message' => $result['message']
+            ], 404);
+        }
 
-        return response()->json($product);
+        return response()->json([
+            'success' => true,
+            'data' => $result['data']
+        ]);
     }
 
     public function update(StoreProductRequest  $request, $id)
     {
-       return DB::transaction(function () use ($request, $id) {
-        
-        $product = Product::updateOrCreate(
-            ['id' => $id], 
-            $request->validated()
-        );
-        if ($request->has('variants')) {
-            $product->variants()->delete(); 
+        $result = $this->productRepo->updateProduct($request->validated(), $id);
 
-            if (!empty($request->variants)) {
-                $product->variants()->createMany($request->variants);
-            }
-        }
-        
+        if (!$result['status']) {
             return response()->json([
-                'message' => 'Product updated successfully!',
-                'product' => $product->load('variants')
-            ], 200);
-        });
+                'success' => false,
+                'message' => $result['message']
+            ], 400);
+        }
+
+        return response()->json([
+            'success' => true,
+            'message' => $result['message'],
+            'data' => $result['data']
+        ]);
     }
-
-
     public function destroy($id)
     {
-        return DB::transaction(function () use ($id) {
-            $product = Product::findOrFail($id);
-            $product->variants()->delete();
-            $product->delete();
+        $result = $this->productRepo->deleteProduct($id);
 
+        if (!$result['status']) {
             return response()->json([
-                'message' => 'Product and all its variants deleted successfully!'
-            ], 200);
-        });
+                'success' => false,
+                'message' => $result['message']
+            ], 404);
+        }
+
+        return response()->json([
+            'success' => true,
+            'message' => $result['message']
+        ]);
     }
 
     public function uploadProductImage(Request $request)
     {
-        $productId = $request->product_id;
-
         $request->validate([
+            'product_id' => 'required|exists:products,id',
             'images.*' => 'image|max:2048',
         ]);
 
-        $product = Product::findOrFail($productId);
-        $folderPath = "products/{$product->id}";
+        $result = $this->productRepo->uploadProductImages($request);
 
-        if ($request->hasFile('images')) {
-
-            foreach ($request->file('images') as $file) {
-
-                $path = $file->store($folderPath, 'public');
-
-                ProductImage::create([
-                    'product_id' => $product->id,
-                    'image' => $path,
-                ]);
-            }
+        if (!$result['status']) {
+            return response()->json([
+                'success' => false,
+                'message' => $result['message']
+            ], 400);
         }
 
         return response()->json([
-            'status' => 'success',
-            'message' => 'Images uploaded successfully',
-            'images' => $product->images()->get(),
+            'success' => true,
+            'message' => $result['message'],
+            'data' => $result['data']
         ]);
     }
 
     public function getImages($id)
     {
-        $product = Product::with('images')->findOrFail($id);
-        $images = $product->images->map(function ($img) {
-            return [
-                'id' => $img->id,
-                'url' => asset('storage/' . $img->image)
-            ];
-        });
+        $result = $this->productRepo->getProductImages($id);
+
+        if (!$result['status']) {
+            return response()->json([
+                'success' => false,
+                'message' => $result['message']
+            ], 404);
+        }
 
         return response()->json([
-            'status' => true,
-            'images' => $images
+            'success' => true,
+            'data' => $result['data']
         ]);
     }
 
     public function deleteImage($id)
     {
-        $image = ProductImage::findOrFail($id);
-
-        if (Storage::disk('public')->exists($image->image)) {
-            Storage::disk('public')->delete($image->image);
+        $result = $this->productRepo->deleteProductImage($id);
+        
+        if (!$result['status']) {
+            return response()->json([
+                'success' => false,
+                'message' => $result['message']
+            ], 404);
         }
 
-        $image->delete();
-
         return response()->json([
-            'status' => 'success',
-            'message' => 'Image deleted'
+            'success' => true,
+            'message' => $result['message']
         ]);
+
     }
 
     public function getBrand()
     {
-        return Brand::all();
+        $result = $this->productRepo->getBrands();
 
-        // return response()->json([
-        //     'status' => 'success',
-        //     'barnds' => $brands
-        // ]);
+        return response()->json([
+            'success' => true,
+            'data' => $result['data']
+        ]);
     }
 
 }
